@@ -1,84 +1,617 @@
 asyncapi: 2.6.0
-info:
-  title: SmartSensorEvent
-  version: 1.0.0
-  description: Smart Sensor Event V1.0.0
-components:
-  messages:
-    SmartSensorEventObject:
-      payload:
-        type: object
-        required:
-          - Version
-          - Timestamp
-          - Device
-          - Datapoints
-        properties:
-          Version:
-            type: string
-            example: 1.0.0
-            description: API Version
-          Timestamp:
-            type: string
-            format: date-time
-            example: '2022-09-29T07:10:15.520Z'
-            description: Timestamp when the data was published to the UNS
-          Device:
-            type: object
-            required:
-              - Category
-              - Name
-            properties:
-              Category:
-                type: string
-                examples:
-                  - "LFS-3T-B"
-                description: Description or model defined by the manufacturer
-              Name:
-                type: string
-                examples:
-                  - "Freezer 1"
-                description: Description of the sensor defined by end user
-          Datapoints:
-            type: array
-            items:
-              type: object
-              required:
-                - Name
-                - Value
-                - Units
-                - Port
-                - Type
-              properties:
-                Name:
-                  type: string
-                  examples:
-                    - TankLevel1
-                  description: Measurement descriptive name
-                Value:
-                  type: number
-                  format: float
-                  examples:
-                    - 1.25
-                  description: >-
-                    Analog or digital value in real time
-                Units:
-                  type: string
-                  examples:
-                    - °C
-                  description: Units
-                Port:
-                  type: integer
-                  examples:
-                    - 1
-                  description: >-
-                    Phyisical port of the device
-                Type:
-                  type: string
-                  examples:
-                    - "Analog"
-                  description: >-
-                    Analog/Digital/System
 
-                
-          
+info:
+  title: LinkForge-Cloud
+  version: 1.0.0
+  description: |-
+    ## LinkForge-Cloud
+
+    LinkForge-Cloud is an MQTT-based Unified Namespace communication contract
+    designed to provide a standardized interface between Smart Sensors,
+    IoT devices and cloud applications.
+
+    The contract defines a common MQTT topic structure and standardized
+    message formats for telemetry, device data and device configuration.
+
+    ### Message types
+
+    - Telemetry: Real-time measurements and sensor datapoints.
+    - Data: Events, states and device-specific information.
+    - Configuration: Configuration commands and parameters sent to devices.
+
+    ### Topic structure
+
+    LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/{devEvent}
+
+    ### Design goals
+
+    - Standardized MQTT communication
+    - Device and manufacturer agnostic payloads
+    - Support for single sensors and multisensors
+    - Unified Namespace compatible topic structure
+    - Versioned message contracts
+    - Extensible datapoint model
+
+  contact:
+    name: Juan Manuel Jiménez
+    email: contacto@juanma-tech.com.mx
+
+  license:
+    name: Proprietary
+
+id: urn:LinkForge:cloud:smart-sensor
+
+defaultContentType: application/json
+
+tags:
+
+  - name: Telemetry
+    description: Real-time sensor measurements
+
+  - name: Data
+    description: Device events and sensor data
+
+  - name: Configuration
+    description: Device configuration messages
+
+
+servers:
+
+  production:
+    url: broker.linkforge.cloud:8883
+    protocol: mqtts
+    description: |
+      LinkForge production MQTT broker.
+
+      Replace the hostname and port with the production broker
+      configuration used by the deployment.
+
+    security:
+      - mqttUsernamePassword: []
+
+    bindings:
+
+      mqtt:
+        clientId:
+          type: string
+
+
+  development:
+    url: test.mosquitto.org:1883
+    protocol: mqtt
+    description: |
+      Development MQTT broker.
+
+      This server is intended for development and testing purposes only.
+
+
+channels:
+
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/telemetry:
+
+    description: |
+      MQTT topic used by Smart Sensors to publish real-time telemetry.
+
+      Example:
+
+      LinkForge/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/telemetry
+
+      Telemetry messages contain sensor measurements such as temperature,
+      pressure, level, current, voltage or other analog and digital values.
+
+    parameters:
+
+      clientid:
+        description: Client identifier assigned to the customer or user.
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Physical location of the device.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Area where the device is installed.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subarea, line or workstation where the device is installed.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Unique device identifier or serial number.
+        schema:
+          type: string
+          example: ESP32-001
+
+    publish:
+
+      operationId: publishSmartSensorTelemetry
+
+      summary: Publish Smart Sensor telemetry
+
+      description: |
+        Publishes real-time sensor measurements to LinkForge Cloud.
+
+      tags:
+        - name: Telemetry
+
+      message:
+
+        name: SmartSensorTelemetry
+
+        messageId: SmartSensorTelemetry_v1.0.0
+
+        description: |
+          Smart Sensor telemetry message version 1.0.0.
+
+        payload:
+          $ref: '#/components/schemas/SmartSensorTelemetryPayload'
+
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/data:
+
+    description: |
+      MQTT topic used by Smart Sensors to publish device data and events.
+
+      Example:
+
+      LinkForge/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/data
+
+      This topic can be used for information that is not strictly
+      telemetry, such as device events, alarms, counters, states,
+      diagnostics or manufacturer-specific data.
+
+    parameters:
+
+      clientid:
+        description: Client identifier assigned to the customer or user.
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Physical location of the device.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Area where the device is installed.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subarea, line or workstation where the device is installed.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Unique device identifier or serial number.
+        schema:
+          type: string
+          example: ESP32-001
+
+    publish:
+
+      operationId: publishSmartSensorData
+
+      summary: Publish Smart Sensor data
+
+      description: |
+        Publishes device events, states, alarms and other
+        non-telemetry information.
+
+      tags:
+        - name: Data
+
+      message:
+
+        name: SmartSensorData
+
+        messageId: SmartSensorData_v1.0.0
+
+        description: |
+          Smart Sensor data message version 1.0.0.
+
+        payload:
+          $ref: '#/components/schemas/SmartSensorDataPayload'
+
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/configuration:
+
+    description: |
+      MQTT topic used to send configuration messages to Smart Sensors.
+
+      Example:
+
+      LinkForge/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/configuration
+
+      Configuration messages are sent from LinkForge Cloud
+      to the device.
+
+    parameters:
+
+      clientid:
+        description: Client identifier assigned to the customer or user.
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Physical location of the device.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Area where the device is installed.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subarea, line or workstation where the device is installed.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Unique device identifier or serial number.
+        schema:
+          type: string
+          example: ESP32-001
+
+    subscribe:
+
+      operationId: receiveSmartSensorConfiguration
+
+      summary: Receive Smart Sensor configuration
+
+      description: |
+        Receives configuration commands and parameters from LinkForge Cloud.
+
+      tags:
+        - name: Configuration
+
+      message:
+
+        name: SmartSensorConfiguration
+
+        messageId: SmartSensorConfiguration_v1.0.0
+
+        description: |
+          Smart Sensor configuration message version 1.0.0.
+
+        payload:
+          $ref: '#/components/schemas/SmartSensorConfigurationPayload'
+
+
+components:
+
+
+  securitySchemes:
+
+    mqttUsernamePassword:
+      type: userPassword
+      description: MQTT username and password authentication.
+
+
+  messages:
+
+
+    SmartSensorTelemetryMessage:
+      name: SmartSensorTelemetry
+      title: Smart Sensor Telemetry
+      summary: Real-time sensor measurements
+      messageId: SmartSensorTelemetry_v1.0.0
+      contentType: application/json
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorTelemetryPayload'
+
+
+    SmartSensorDataMessage:
+      name: SmartSensorData
+      title: Smart Sensor Data
+      summary: Device events and non-telemetry data
+      messageId: SmartSensorData_v1.0.0
+      contentType: application/json
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorDataPayload'
+
+
+    SmartSensorConfigurationMessage:
+      name: SmartSensorConfiguration
+      title: Smart Sensor Configuration
+      summary: Device configuration
+      messageId: SmartSensorConfiguration_v1.0.0
+      contentType: application/json
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorConfigurationPayload'
+
+
+  schemas:
+
+
+    SmartSensorTelemetryPayload:
+
+      type: object
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Datapoints
+
+      properties:
+
+        Version:
+          type: string
+          description: API version of the message.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when the telemetry data was generated or
+            published by the device.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Datapoints:
+          type: array
+          description: |
+            Collection of measurements generated by the device.
+
+          items:
+            $ref: '#/components/schemas/Datapoint'
+
+
+    SmartSensorDataPayload:
+
+      type: object
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Event
+
+      properties:
+
+        Version:
+          type: string
+          description: API version of the message.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when the event was generated or published.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Event:
+          type: object
+
+          required:
+            - Name
+            - Type
+
+          properties:
+
+            Name:
+              type: string
+              description: |
+                Name of the event generated by the device.
+              example: HighTemperature
+
+            Type:
+              type: string
+              description: Type of device event.
+              enum:
+                - Event
+                - Alarm
+                - State
+                - Counter
+                - Diagnostic
+                - Custom
+              example: Alarm
+
+            Value:
+              description: Event value.
+              oneOf:
+                - type: string
+                - type: number
+                - type: integer
+                - type: boolean
+
+              example: 85.5
+
+            Units:
+              type: string
+              description: Units associated with the event value.
+              example: °C
+
+            Description:
+              type: string
+              description: Human-readable event description.
+              example: Temperature exceeded configured threshold.
+
+
+    SmartSensorConfigurationPayload:
+
+      type: object
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Configuration
+
+      properties:
+
+        Version:
+          type: string
+          description: API version of the message.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when the configuration was generated.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Configuration:
+
+          type: object
+
+          required:
+            - Action
+
+          properties:
+
+            Action:
+              type: string
+              description: Configuration action requested by LinkForge Cloud.
+              enum:
+                - Update
+                - Reset
+                - Reboot
+                - FactoryReset
+                - Synchronize
+              example: Update
+
+            Parameters:
+              type: object
+              description: |
+                Configuration parameters to be applied by the device.
+
+              additionalProperties: true
+
+              example:
+                telemetryInterval: 5000
+                mqttKeepAlive: 60
+                wifiReconnectAttempts: 5
+
+            RequestId:
+              type: string
+              description: |
+                Unique identifier used to correlate configuration
+                requests and responses.
+              example: cfg-20260907-0001
+
+
+    Device:
+
+      type: object
+
+      required:
+        - Category
+        - Name
+
+      properties:
+
+        Category:
+          type: string
+          description: |
+            Device category, model or manufacturer-defined identifier.
+          example: LFS-3T-B
+
+        Name:
+          type: string
+          description: |
+            Human-readable device name defined by the end user.
+          example: Freezer 1
+
+        Manufacturer:
+          type: string
+          description: Device manufacturer.
+          example: LinkForge
+
+        FirmwareVersion:
+          type: string
+          description: Firmware version currently installed.
+          example: 1.2.4
+
+
+    Datapoint:
+
+      type: object
+
+      required:
+        - Name
+        - Value
+        - Units
+        - Port
+        - Type
+
+      properties:
+
+        Name:
+          type: string
+          description: |
+            Descriptive name of the measurement.
+          example: TankLevel1
+
+        Value:
+          type: number
+          format: float
+          description: |
+            Analog or digital value captured by the device.
+          example: 1.25
+
+        Units:
+          type: string
+          description: |
+            Engineering units associated with the measurement.
+          example: °C
+
+        Port:
+          type: integer
+          description: |
+            Physical or logical port where the sensor is connected.
+          example: 1
+
+        Type:
+          type: string
+          description: |
+            Datapoint type.
+          enum:
+            - Analog
+            - Digital
+            - System
+          example: Analog
+
+        Quality:
+          type: string
+          description: |
+            Optional quality indicator for the measurement.
+          enum:
+            - Good
+            - Bad
+            - Uncertain
+          example: Good

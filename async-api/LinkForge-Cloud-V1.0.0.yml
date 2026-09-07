@@ -1,54 +1,872 @@
 asyncapi: 2.6.0
+
 info:
   title: LinkForge-Cloud
   version: 1.0.0
   description: |-
-   ### LinkForge-Cloud
-   * SmartSensors Event
+    ## LinkForge-Cloud
+
+    **LinkForge-Cloud** es un contrato de comunicación basado en MQTT,
+    diseñado para estandarizar la comunicación entre Smart Sensors,
+    dispositivos IoT, gateways y aplicaciones de Cloud.
+
+    El objetivo de este contrato es proporcionar una estructura común
+    para que dispositivos desarrollados por LinkForge o por terceros
+    puedan integrarse fácilmente a LinkForge-Cloud.
+
+    ### Tipos de mensajes
+
+    - **Telemetry:** mediciones y valores obtenidos por los sensores.
+    - **Data:** eventos, estados, alarmas y otra información generada por
+      el dispositivo.
+    - **Configuration:** parámetros y comandos de configuración enviados
+      desde LinkForge-Cloud hacia el dispositivo.
+    - **Configuration Response:** respuesta enviada por el dispositivo
+      para informar el resultado del procesamiento de una solicitud
+      de Configuration.
+
+    ### Estructura de Topics
+
+    **LinkForge**/{*clientid*}/{*location*}/{*area*}/{*subarea*}/**dev**/{*deviceid*}/{*devEvent*}
+
+    ### Características
+
+    - Comunicación basada en MQTT.
+    - Identificación jerárquica de dispositivos.
+    - Payloads estandarizados.
+    - Versionado de mensajes.
+    - Soporte para Smart Sensors individuales y multisensores.
+    - Integración de dispositivos desarrollados por LinkForge o terceros.
+    - Extensibilidad para nuevos tipos de sensores y dispositivos.
 
   contact:
     name: Juan Manuel Jiménez
-    email: contacto@juanmma-tech.com.mx
+    email: contacto@juanma-tech.com
+
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit/
+
+
 id: urn:LinkForge:cloud:smart-sensor
+
+tags:
+
+  - name: Telemetry
+    description: Mediciones y valores generados por los sensores.
+
+  - name: Status
+    description: Eventos, estados, alarmas y datos generados por los dispositivos.
+
+  - name: Configuration
+    description: Configuración y comandos enviados hacia los dispositivos.
+
+
+servers:
+
+  production:
+
+    url: broker.linkforge.cloud:8883
+    protocol: mqtts
+
+    description: |
+      MQTT Broker utilizado por el ambiente de producción de **LinkForge-Cloud**.
+
+      La dirección, puerto y configuración deberán ser reemplazados
+      por los valores correspondientes al ambiente de producción.
+
+    security:
+      - mqttUsernamePassword: []
+
+
+
+  development:
+
+    url: test.mosquitto.org:1883
+    protocol: mqtt
+
+    description: |
+      **MQTT Broker** utilizado para desarrollo y pruebas. Este ambiente no deberá utilizarse para aplicaciones de producción.
+
+
 channels:
-  ng/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/{devEvent}:
-    description: Los payload publicados en este topics, contienen la información referente a cualquier tipo de SmartSensor en LinkForge Cloud. Con lo que buscamos que, cualquier sensor, desarrollado o no por el equipo de LinkForge, pueda integrarse fácilmente.
+
+
+  # ========== TELEMETRY ==============
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/telemetry:
+
+    description: |
+      Topic utilizado por los dispositivos para publicar información
+      de **Telemetry** hacia **LinkForge-Cloud**.
+
+      Ejemplo:
+
+      **LinkForge**/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/**telemetry**
+
+      Este Topic está destinado principalmente a mediciones obtenidas
+      de sensores en tiempo real o de manera periódica.
+
     parameters:
+
       clientid:
-        description: ClientId asignado al cliente o usuario
+        description: Identificador asignado al cliente o usuario propietario del sensor
         schema:
           type: string
+          example: client01
+
       location:
-        description: Ubicación del sensor, ejemplo "Planta3"
+        description: Ubicación física donde se encuentra instalado el dispositivo.
         schema:
           type: string
+          example: Planta3
+
       area:
-        description: Área del sensor, ejemplo "Ensamblaje"
+        description: Área donde se encuentra instalado el dispositivo.
         schema:
           type: string
+          example: Ensamblaje
+
       subarea:
-        description: Subárea del sensor, ejemplo "Montaje"
+        description: Subárea, línea o estación donde se encuentra instalado el dispositivo.
         schema:
           type: string
+          example: Montaje
+
       deviceid:
-        description: El número de serie del dispositivo, extraido directamente del microcontrolador
+        description: Identificador único o número de serie del dispositivo.
         schema:
           type: string
-      devEvent:
-        description: Nombre del evento, en este caso siempre será "SmartSensorEvent" o "SmartSensorStatus"
-        schema:
-          type: string
-          enum:
-            - SmartSensorEvent
-            - SmartSensorStatus
+          example: ESP32-001
+
     publish:
-      operationId: Smart Sensors Event
+
+      operationId: publishSmartSensorTelemetry
+
+      summary: Publicar Telemetry de un Smart Sensor
+
+      description: |
+        Publica las mediciones obtenidas por uno o más sensores
+        conectados al dispositivo.
+
       tags:
-        - name: Smart Sensors Event 1.0.0
+        - name: Telemetry
+
       message:
-        oneOf:
-          - name: Smart Sensor Event 1.0.0
-            messageId: Single and Multi Sensor Event 1.0.0
-            description: This payload contains all the data about sensor and multisensor event
-            $ref: '../async-api/components/SmartSensorEvent_v1.0.0.yml#/components/messages/SmartSensorEventObject' 
-  
+
+        $ref: '#/components/messages/SmartSensorTelemetryMessage'
+
+
+  # ============= STATUS ========================
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/status:
+
+    description: |
+      Topic utilizado por los dispositivos para publicar información
+      de estado o eventos hacia **LinkForge-Cloud**.
+
+      Ejemplo:
+
+      **LinkForge**/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/**status**
+
+      Este Topic está destinado a información que no corresponde
+      directamente a una medición de Telemetry.
+
+      Puede utilizarse para eventos, alarmas, estados, contadores,
+      diagnósticos o información específica del dispositivo.
+
+    parameters:
+
+      clientid:
+        description: Identificador asignado al cliente o usuario propietario del sensor
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Ubicación física donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Área donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subárea, línea o estación donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Identificador único o número de serie del dispositivo.
+        schema:
+          type: string
+          example: ESP32-001
+
+    publish:
+
+      operationId: publishSmartSensorStatus
+
+      summary: Publicar Estado o Eventos de un Smart Sensor
+
+      description: |
+        Publica eventos, estados, alarmas, contadores, diagnósticos
+        y otra información generada por el dispositivo.
+
+      tags:
+        - name: Status
+
+      message:
+
+        $ref: '#/components/messages/SmartSensorStatusMessage'
+
+
+  # ============= CONFIGURATION ==============
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/configuration:
+
+    description: |
+      Topic utilizado para enviar mensajes de Configuration
+      desde LinkForge-Cloud hacia los dispositivos.
+
+      Ejemplo:
+
+      **LinkForge**/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/**configuration**
+
+      Este Topic permite modificar parámetros del dispositivo,
+      ejecutar comandos o solicitar acciones específicas.
+
+    parameters:
+
+      clientid:
+        description: Identificador asignado al cliente o usuario.
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Ubicación física donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Área donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subárea, línea o estación donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Identificador único o número de serie del dispositivo.
+        schema:
+          type: string
+          example: ESP32-001
+
+    subscribe:
+
+      operationId: receiveSmartSensorConfiguration
+
+      summary: Recibir Configuration de LinkForge-Cloud
+
+      description: |
+        Recibe mensajes de configuración y comandos enviados
+        desde LinkForge-Cloud hacia el dispositivo.
+
+      tags:
+        - name: Configuration
+
+      message:
+
+        $ref: '#/components/messages/SmartSensorConfigurationMessage'
+
+
+  # ======================= CONFIGURATION RESPONSE =========
+
+  LinkForge/{clientid}/{location}/{area}/{subarea}/dev/{deviceid}/configuration-response:
+
+    description: |
+      Topic utilizado por los dispositivos para enviar la respuesta
+      correspondiente a una solicitud de Configuration recibida
+      desde LinkForge-Cloud.
+
+      Ejemplo:
+
+      **LinkForge**/client01/Planta3/Ensamblaje/Montaje/dev/ESP32-001/**configuration-response**
+
+      La respuesta permite determinar si la solicitud de configuración
+      fue recibida por el dispositivo, si fue aplicada correctamente
+      o si ocurrió algún error durante su procesamiento.
+
+      El campo RequestId permite relacionar la respuesta con la
+      solicitud de Configuration original.
+
+    parameters:
+
+      clientid:
+        description: Identificador asignado al cliente o usuario propietario del sensor
+        schema:
+          type: string
+          example: client01
+
+      location:
+        description: Ubicación física donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Planta3
+
+      area:
+        description: Área donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Ensamblaje
+
+      subarea:
+        description: Subárea, línea o estación donde se encuentra instalado el dispositivo.
+        schema:
+          type: string
+          example: Montaje
+
+      deviceid:
+        description: Identificador único o número de serie del dispositivo.
+        schema:
+          type: string
+          example: ESP32-001
+
+    publish:
+
+      operationId: publishSmartSensorConfigurationResponse
+
+      summary: Publicar respuesta de Configuration
+
+      description: |
+        Publica el resultado del procesamiento de una solicitud
+        de Configuration recibida por el dispositivo.
+
+      tags:
+        - name: Configuration
+
+      message:
+
+        $ref: '#/components/messages/SmartSensorConfigurationResponseMessage'
+
+
+components:
+
+
+  # ========= SECURITY ============
+
+  securitySchemes:
+
+    mqttUsernamePassword:
+
+      type: userPassword
+
+      description: |
+        Autenticación mediante usuario y contraseña para acceder
+        al MQTT Broker.
+
+
+  # =========MESSAGES ================
+
+  messages:
+
+
+    SmartSensorTelemetryMessage:
+
+      name: SmartSensorTelemetry
+
+      title: Smart Sensor Telemetry
+
+      summary: Mensaje de Telemetry de un Smart Sensor
+
+      description: |
+        Mensaje utilizado para transmitir mediciones obtenidas
+        por uno o más sensores conectados a un Smart Sensor.
+
+      messageId: SmartSensorTelemetry_v1.0.0
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorTelemetryPayload'
+
+
+    SmartSensorStatusMessage:
+
+      name: SmartSensorStatus
+
+      title: Smart Sensor Status
+
+      summary: Mensaje de Status de un Smart Sensor
+
+      description: |
+        Mensaje utilizado para transmitir eventos, estados, alarmas,
+        contadores, diagnósticos y otra información generada
+        por el dispositivo.
+
+      messageId: SmartSensorStatus_v1.0.0
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorDataPayload'
+
+
+    SmartSensorConfigurationMessage:
+
+      name: SmartSensorConfiguration
+
+      title: Smart Sensor Configuration
+
+      summary: Mensaje de Configuration de un Smart Sensor
+
+      description: |
+        Mensaje utilizado por LinkForge-Cloud para enviar
+        configuraciones y comandos a los dispositivos.
+
+      messageId: SmartSensorConfiguration_v1.0.0
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorConfigurationPayload'
+
+
+    SmartSensorConfigurationResponseMessage:
+
+      name: SmartSensorConfigurationResponse
+
+      title: Smart Sensor Configuration Response
+
+      summary: Respuesta a una solicitud de Configuration
+
+      description: |
+        Mensaje utilizado por un dispositivo para informar el resultado
+        del procesamiento de una solicitud de Configuration.
+
+        El campo RequestId permite relacionar esta respuesta con
+        la solicitud original.
+
+      messageId: SmartSensorConfigurationResponse_v1.0.0
+
+      payload:
+        $ref: '#/components/schemas/SmartSensorConfigurationResponsePayload'
+
+
+  # ======= SCHEMAS =====================
+
+  schemas:
+
+
+    # ========= DEVICE =================
+
+    Device:
+
+      type: object
+
+      description: |
+        Información básica de identificación del dispositivo.
+
+      required:
+        - Category
+        - Name
+
+      properties:
+
+        Category:
+          type: string
+          description: |
+            Categoría, modelo o identificador definido por
+            el fabricante del dispositivo.
+          example: LFS-3T-B
+
+        Name:
+          type: string
+          description: |
+            Nombre descriptivo del dispositivo definido por
+            el usuario final.
+          example: Freezer 1
+
+        Manufacturer:
+          type: string
+          description: Fabricante del dispositivo.
+          example: LinkForge
+
+        FirmwareVersion:
+          type: string
+          description: Versión del firmware instalado en el dispositivo.
+          example: 1.2.4
+
+
+    # ========== DATAPOINT ===============
+
+    Datapoint:
+
+      type: object
+
+      description: |
+        Representa una medición individual obtenida por un sensor.
+
+      required:
+        - Name
+        - Value
+        - Units
+        - Port
+        - Type
+
+      properties:
+
+        Name:
+          type: string
+          description: |
+            Nombre descriptivo de la medición.
+          example: TankLevel1
+
+        Value:
+          type: number
+          format: float
+          description: |
+            Valor de la medición obtenido en tiempo real.
+          example: 1.25
+
+        Units:
+          type: string
+          description: |
+            Unidad de medida utilizada para representar el valor.
+          example: °C
+
+        Port:
+          type: integer
+          description: |
+            Puerto físico o lógico utilizado por el sensor.
+          example: 1
+
+        Type:
+          type: string
+          description: |
+            Tipo de dato o señal representada por el Datapoint.
+          enum:
+            - Analog
+            - Digital
+            - System
+          example: Analog
+
+        Quality:
+          type: string
+          description: |
+            Indicador opcional de la calidad de la medición.
+          enum:
+            - Good
+            - Bad
+            - Uncertain
+          example: Good
+
+
+    # ======== TELEMETRY PAYLOAD ============
+
+    SmartSensorTelemetryPayload:
+
+      type: object
+
+      description: |
+        Payload utilizado para transmitir Telemetry de uno
+        o más sensores.
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Datapoints
+
+      properties:
+
+        Version:
+          type: string
+          description: |
+            Versión de la especificación del mensaje.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Fecha y hora en la que la información fue generada
+            o publicada por el dispositivo.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Datapoints:
+          type: array
+          description: |
+            Lista de mediciones obtenidas por los sensores
+            conectados al dispositivo.
+
+          items:
+            $ref: '#/components/schemas/Datapoint'
+
+
+    # ============ DATA PAYLOAD ====================
+
+    SmartSensorDataPayload:
+
+      type: object
+
+      description: |
+        Payload utilizado para transmitir información generada
+        por el dispositivo que no corresponde directamente
+        a Telemetry.
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Event
+
+      properties:
+
+        Version:
+          type: string
+          description: |
+            Versión de la especificación del mensaje.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Fecha y hora en la que el evento fue generado
+            o publicado por el dispositivo.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Event:
+
+          type: object
+
+          description: |
+            Información correspondiente al evento generado
+            por el dispositivo.
+
+          required:
+            - Name
+            - Type
+
+          properties:
+
+            Name:
+              type: string
+              description: |
+                Nombre descriptivo del evento.
+              example: HighTemperature
+
+            Type:
+              type: string
+              description: |
+                Tipo de evento generado por el dispositivo.
+              enum:
+                - Event
+                - Alarm
+                - State
+                - Counter
+                - Diagnostic
+                - Custom
+              example: Alarm
+
+            Value:
+              description: |
+                Valor asociado al evento.
+
+              oneOf:
+                - type: string
+                - type: number
+                - type: integer
+                - type: boolean
+
+              example: 85.5
+
+            Units:
+              type: string
+              description: |
+                Unidad de medida asociada al valor del evento.
+              example: °C
+
+            Description:
+              type: string
+              description: |
+                Descripción adicional del evento.
+              example: Temperature exceeded configured threshold.
+
+
+    # ============= CONFIGURATION PAYLOAD==================
+
+    SmartSensorConfigurationPayload:
+
+      type: object
+
+      description: |
+        Payload utilizado para enviar configuraciones y comandos
+        desde LinkForge-Cloud hacia un dispositivo.
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - Configuration
+
+      properties:
+
+        Version:
+          type: string
+          description: |
+            Versión de la especificación del mensaje.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Fecha y hora en la que la solicitud de configuración
+            fue generada.
+          example: '2026-09-07T16:10:15.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        Configuration:
+
+          type: object
+
+          description: |
+            Configuración o comando que deberá ejecutar
+            el dispositivo.
+
+          required:
+            - Action
+
+          properties:
+
+            Action:
+              type: string
+              description: |
+                Acción que deberá ejecutar el dispositivo.
+              enum:
+                - Update
+                - Reset
+                - Reboot
+                - FactoryReset
+                - Synchronize
+              example: Update
+
+            Parameters:
+              type: object
+              description: |
+                Parámetros que deberán aplicarse durante
+                la configuración.
+
+              additionalProperties: true
+
+              example:
+                telemetryInterval: 5000
+                mqttKeepAlive: 60
+                wifiReconnectAttempts: 5
+
+            RequestId:
+              type: string
+              description: |
+                Identificador único de la solicitud.
+                Permite relacionar una solicitud de configuración
+                con una respuesta o confirmación posterior.
+              example: cfg-20260907-0001
+
+
+        # ========== CONFIGURATION RESPONSE PAYLOAD ============
+
+    SmartSensorConfigurationResponsePayload:
+
+      type: object
+
+      description: |
+        Payload utilizado por un dispositivo para informar el resultado
+        de una solicitud de Configuration.
+
+      required:
+        - Version
+        - Timestamp
+        - Device
+        - RequestId
+        - Status
+
+      properties:
+
+        Version:
+          type: string
+          description: |
+            Versión de la especificación del mensaje.
+          example: 1.0.0
+
+        Timestamp:
+          type: string
+          format: date-time
+          description: |
+            Fecha y hora en la que el dispositivo generó la respuesta.
+          example: '2026-09-07T16:10:18.520Z'
+
+        Device:
+          $ref: '#/components/schemas/Device'
+
+        RequestId:
+          type: string
+          description: |
+            Identificador de la solicitud de Configuration a la que
+            corresponde esta respuesta.
+
+            Debe coincidir exactamente con el RequestId recibido
+            en el mensaje de Configuration original.
+          example: cfg-20260907-0001
+
+        Status:
+          type: string
+          description: |
+            Resultado del procesamiento de la solicitud de Configuration.
+
+            Received:
+              La solicitud fue recibida correctamente por el dispositivo,
+              pero todavía no se confirma que haya sido aplicada.
+
+            Applied:
+              La configuración fue recibida y aplicada correctamente.
+
+            Error:
+              La solicitud fue recibida, pero no pudo ser aplicada
+              correctamente.
+          enum:
+            - Received
+            - Applied
+            - Error
+          example: Applied
+
+        ErrorCode:
+          type: string
+          description: |
+            Código que identifica el error ocurrido durante el
+            procesamiento de la configuración.
+
+            Este campo deberá enviarse cuando Status sea Error.
+          example: CONFIG_INVALID_PARAMETER
+
+        ErrorMessage:
+          type: string
+          description: |
+            Descripción del error ocurrido durante el procesamiento
+            de la configuración.
+
+            Este campo deberá enviarse cuando Status sea Error.
+          example: telemetryInterval must be greater than 0
